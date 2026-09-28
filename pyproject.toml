@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "book2plate"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Nicolas PENGOV" }]
+dependencies = [
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.2.0",
+    "duckdb>=0.10.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "pyarrow>=15.0.0",
+    "scikit-learn>=1.4.0",
+    "sqlalchemy>=2.0.29",
+    "psycopg[binary]>=3.1.18",
+    "pgvector>=0.2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+]
+ingest = [
+    "pdfplumber>=0.11.0",
+    "yt-dlp>=2024.4.9",
+    "faster-whisper>=1.0.2",
+]
+engine = [
+    "langgraph>=0.0.39",
+    "langchain-core>=0.1.42",
+    "langfuse>=2.27.0",
+]
+api = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "streamlit>=1.33.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
