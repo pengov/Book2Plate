@@ -36,7 +36,6 @@ class FlavorChemistryEngine:
         with open(self.embeddings_path, "rb") as f:
             raw: dict[str, np.ndarray] = pickle.load(f)
 
-        # Le CSV brut contient node_type ; le CSV nettoyé ne contient que des ingrédients.
         id_to_name: dict[str, str] = {}
         valid_names: set[str] = set()
         original_norms: dict[str, float] = {}
