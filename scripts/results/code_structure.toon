@@ -1,0 +1,69 @@
+root: book2plate
+file_tree:
+  api:
+    routes:
+      ingest.py: 0
+      planner.py: 1
+      recipes.py: 2
+    __init__.py: 3
+    main.py: 4
+  core:
+    __init__.py: 5
+    enums.py: 6
+    schemas.py: 7
+  deterministic:
+    __init__.py: 8
+    beverage_pairing.py: 9
+    chemistry.py: 10
+    nutrition.py: 11
+    pricing.py: 12
+  engine:
+    __init__.py: 13
+    formatters.py: 14
+    fusion_nodes.py: 15
+    graph.py: 16
+    guardrails.py: 17
+    state.py: 18
+  ingestion:
+    __init__.py: 19
+    audio_transcriber.py: 20
+    cli.py: 21
+    insta_extractor.py: 22
+    pdf_parser.py: 23
+    structurer.py: 24
+  storage:
+    __init__.py: 25
+    clustering.py: 26
+    database.py: 27
+    models.py: 28
+    vector_store.py: 29
+  ui:
+    app.py: 30
+  __init__.py: 31
+  config.py: 32
+modules[1]{file_id,docstring}:
+  10,Moteur déterministe de substitution d'ingrédients basé sur FlavorGraph.
+classes[9]{id,file_id,name,docstring}:
+  0,6,UnitEnum,null
+  1,6,CourseType,null
+  2,6,DietaryConstraint,null
+  3,7,IngredientItem,null
+  4,7,CookingStep,null
+  5,7,NutritionInfo,null
+  6,7,RecipeSchema,null
+  7,10,FlavorChemistryEngine,Calcule des substituts d'ingrédients par similarité cosinus sur les embeddings FlavorGraph 300D.
+  8,32,Settings,null
+methods[13]{class_id,name,signature,docstring}:
+  6,total_time_minutes,()->int,null
+  7,__init__,"(embeddings_path?:Path,nodes_path?:Path)->void",Initialise le moteur et charge les embeddings depuis les chemins fournis ou la configuration.
+  7,_load_embeddings,()->void,Charge et normalise les embeddings des nœuds identifiés comme ingrédients.
+  7,_metric,"(vec1:ndarray,vec2:ndarray)->float","Calcule le produit scalaire de deux embeddings déjà normalisés, équivalent au cosinus."
+  7,total_ingredients,()->int,Retourne le nombre d'ingrédients chargés.
+  7,ingredient_names,"()->str[]",Retourne les noms normalisés de tous les ingrédients chargés.
+  7,get_ingredient_name,"(ingredient_name:str)->str?","Normalise un nom et le retourne s'il est connu, sinon retourne None."
+  7,get_ingredient_names,"(ingredient_names:str[])->str[]",Normalise une liste de noms et conserve uniquement les ingrédients connus.
+  7,get_ingredient_norm,"(ingredient_name:str)->float?","Retourne la norme L2 d'origine d'un ingrédient connu, ou None s'il est inconnu."
+  7,get_embedding,"(ingredient_name:str)->ndarray?","Retourne l'embedding normalisé d'un ingrédient connu, ou None s'il est inconnu."
+  7,find_flavor_pairings,"(ingredient_name:str,top_k:int=0,min_similarity:float=0)->(str,float)[]","Retourne les ingrédients les plus proches par similarité cosinus.\n\n`top_k=0` retourne tous les résultats au-dessus du seuil ; un ingrédient inconnu\nproduit une liste vide."
+  7,find_multi_flavors_pairings,"(ingredient_names:str[],top_k:int=0,min_similarity:float=0,weights?:float[])->((str,float)[],(str,float)[][])","Classe les candidats par proximité au vecteur moyen pondéré des ingrédients.\n\nRetourne les candidats classés et leurs scores individuels par ingrédient source.\n`top_k=0` conserve tous les candidats au-dessus du seuil."
+  7,flavor_harmony_score,"(ingredient_names:str[],weights?:float[])->float","Calcule la similarité moyenne des ingrédients avec leur vecteur moyen pondéré.\n\nRetourne 0.0 si ce vecteur moyen est nul."
