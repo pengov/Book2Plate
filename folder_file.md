@@ -1,122 +1,114 @@
-# Architecture du projet Book2Plate (`folder_file.md`)
+# Book2Plate Project Architecture (`folder_file.md`)
 
-### Fichiers de configuration et d'infrastructure à la racine
+### Configuration and Infrastructure Files at the Root
 
-* **`.env.example`** : Modèle des variables d'environnement nécessaires au projet (identifiants, ports, clés API).
-* **`.gitignore`** : Liste des répertoires et fichiers ignorés par Git (fichiers temporaires, environnement virtuel, gros médias).
-* **`docker-compose.yml`** : Fichier de configuration Docker orchestrant la base PostgreSQL avec l'extension vectorielle pgvector.
-* **`Makefile`** : Raccourcis de commandes terminal pour installer, lancer les conteneurs, formater et exécuter les tests.
-* **`pyproject.toml`** : Spécification moderne du package Python, des dépendances par brique et de la configuration des outils de test.
-* **`requirements.txt`** : Liste figée des dépendances Python requises pour le socle d'exécution.
-* **`requirements-dev.txt`** : Liste des dépendances complémentaires dédiées aux tests, au linting et aux modules en développement.
-* **`README.md`** : Guide principal présentant l'architecture globale, les fonctionnalités clés et les commandes de démarrage.
-
----
-
-### Répertoire `data/` (Jeux de données et référentiels)
-
-* **`data/`** : Répertoire parent regroupant l'ensemble des données brutes, des référentiels statiques et des jeux d'évaluation.
-* **`data/raw/`** : Espace de stockage local pour vos fichiers PDF de cuisine bruts et les extractions audio temporaires.
-* **`data/references/`** : Dossier regroupant les quatre bases de données ouvertes utilisées par les moteurs déterministes.
-* **`data/references/flavorgraph_embeddings.pkl`** : Plongements vectoriels 300D pour calculer les substitutions moléculaires et aromatiques.
-* **`data/references/open_prices.parquet`** : Base de prix réels relevés en supermarchés français issue d'Open Food Facts.
-* **`data/references/ciqual_2020.csv`** : Table nutritionnelle officielle de l'ANSES contenant les teneurs en calories et macronutriments.
-* **`data/references/wine_pairing_rules.json`** : Matrice structurée des règles de sommellerie et d'accords sans alcool.
-
-
-* **`data/eval_datasets/`** : Jeux de recettes de référence annotés servant de référence pour les tests de non-hallucination en CI/CD.
+* **`.env.example`**: Template for the environment variables required by the project (credentials, ports, API keys).
+* **`.gitignore`**: List of directories and files ignored by Git (temporary files, virtual environment, large media).
+* **`docker-compose.yml`**: Docker configuration file orchestrating the PostgreSQL database with the pgvector extension.
+* **`Makefile`**: Terminal command shortcuts for installing, starting containers, formatting, and running tests.
+* **`pyproject.toml`**: Modern Python package specification, per-component dependencies, and tool configuration.
+* **`requirements.txt`**: Pinned list of Python dependencies required for the runtime base.
+* **`requirements-dev.txt`**: Additional dependencies for testing, linting, and modules under development.
+* **`README.md`**: Main guide presenting the overall architecture, key features, and startup commands.
 
 ---
 
-### Répertoire `src/book2plate/` (Code source applicatif)
+### `data/` Directory (Datasets and Reference Data)
 
-* **`src/`** : Racine des sources Python isolant le code métier des configurations annexes.
-* **`src/book2plate/`** : Package principal contenant tous les sous-modules de l'application.
-* **`src/book2plate/__init__.py`** : Déclare le répertoire comme package Python importable.
-* **`src/book2plate/config.py`** : Charge et valide de façon typée les variables de configuration et chemins via Pydantic Settings.
-
-#### Module `core/` (Contrats de données universels)
-
-* **`src/book2plate/core/`** : Cœur de l'application définissant les contrats de données partagés sans dépendance externe.
-* **`src/book2plate/core/__init__.py`** : Expose les modèles de données fondamentaux du module core.
-* **`src/book2plate/core/enums.py`** : Énumérations strictes des unités de mesure, types de plats et contraintes alimentaires.
-* **`src/book2plate/core/schemas.py`** : Schémas Pydantic v2 définissant les structures strictes d'ingrédients, étapes et recettes.
-
-#### Module `deterministic/` (Moteurs de calculs réels — Zéro LLM)
-
-* **`src/book2plate/deterministic/`** : Algorithmes mathématiques et déterministes fonctionnant sur les données de référence sans LLM.
-* **`src/book2plate/deterministic/__init__.py`** : Expose les fonctions de calcul déterministes.
-* **`src/book2plate/deterministic/chemistry.py`** : Calcule les similarités aromatiques et propose des substituts d'ingrédients via FlavorGraph.
-* **`src/book2plate/deterministic/pricing.py`** : Calcule le coût réel au kilo et le budget total du panier via les données Open Prices.
-* **`src/book2plate/deterministic/nutrition.py`** : Mappe les ingrédients avec la table Ciqual pour calculer les calories et macronutriments exacts.
-* **`src/book2plate/deterministic/beverage_pairing.py`** : Détermine les accords vins et boissons sans alcool selon les dominantes gustatives du plat.
-
-#### Module `ingestion/` (Extraction multimodale)
-
-* **`src/book2plate/ingestion/`** : Pipeline d'extraction transformant des PDFs et vidéos Instagram en texte structuré.
-* **`src/book2plate/ingestion/__init__.py`** : Initialise le pipeline d'ingestion.
-* **`src/book2plate/ingestion/pdf_parser.py`** : Découpe les pages de livres PDF et sépare la liste d'ingrédients des instructions.
-* **`src/book2plate/ingestion/insta_extractor.py`** : Récupère la légende textuelle et télécharge la piste audio des Reels Instagram via yt-dlp.
-* **`src/book2plate/ingestion/audio_transcriber.py`** : Retranscrit localement la voix des vidéos culinaires en texte à l'aide de Faster-Whisper.
-* **`src/book2plate/ingestion/structurer.py`** : Convertit le texte brut issu des livres ou de Whisper en un objet RecipeSchema validé.
-* **`src/book2plate/ingestion/cli.py`** : Script exécutable en terminal pour tester manuellement l'ingestion d'un fichier ou d'un lien.
-
-#### Module `storage/` (Persistance et indexation vectorielle)
-
-* **`src/book2plate/storage/`** : Couche d'accès aux données, persistance relationnelle et recherche de similarité.
-* **`src/book2plate/storage/__init__.py`** : Initialise la couche de stockage.
-* **`src/book2plate/storage/database.py`** : Gère la connexion asynchrone et les sessions vers la base de données PostgreSQL.
-* **`src/book2plate/storage/models.py`** : Définit les tables SQLAlchemy pour les recettes, ingrédients, clusters et retours utilisateurs.
-* **`src/book2plate/storage/vector_store.py`** : Indexe les descriptions de recettes et permet la recherche par similarité avec pgvector.
-* **`src/book2plate/storage/clustering.py`** : Regroupe automatiquement les variantes d'un même plat au sein de clusters vectoriels.
-
-#### Module `engine/` (Orchestration multi-agents et fusion)
-
-* **`src/book2plate/engine/`** : Moteur décisionnel combinant la fusion des variantes et la validation sous contrôle humain.
-* **`src/book2plate/engine/__init__.py`** : Initialise le moteur d'orchestration.
-* **`src/book2plate/engine/state.py`** : Définit la structure de l'état partagé circulant dans le graphe LangGraph.
-* **`src/book2plate/engine/graph.py`** : Construit le graphe d'états orienté liant le filtrage, la fusion et l'approbation humaine.
-* **`src/book2plate/engine/fusion_nodes.py`** : Fusionne les variantes d'un cluster en intégrant les substituts aromatiques et restes du frigo.
-* **`src/book2plate/engine/guardrails.py`** : Filtre de sécurité déterministe bloquant l'inclusion d'allergènes ou d'ingrédients interdits.
-* **`src/book2plate/engine/formatters.py`** : Transforme la recette validée en deux affichages (mode détaillé pas-à-pas et mode condensé aide-mémoire).
-
-#### Module `api/` (Exposition web asynchrone)
-
-* **`src/book2plate/api/`** : Couche d'exposition des fonctionnalités métier sous forme d'API HTTP REST.
-* **`src/book2plate/api/__init__.py`** : Initialise le module d'API.
-* **`src/book2plate/api/main.py`** : Point d'entrée de l'application FastAPI déclarant les middlewares et points de montage.
-* **`src/book2plate/api/routes/`** : Dossier regroupant les routeurs FastAPI découpés par domaine fonctionnel.
-* **`src/book2plate/api/routes/ingest.py`** : Endpoints recevant les requêtes d'ingestion de PDFs et d'URLs Instagram.
-* **`src/book2plate/api/routes/recipes.py`** : Endpoints permettant de lister, consulter et filtrer les recettes et clusters enregistrés.
-* **`src/book2plate/api/routes/planner.py`** : Endpoint lançant la génération de menu avec streaming asynchrone des résultats.
-
-
-
-#### Module `ui/` (Interface utilisateur minimale)
-
-* **`src/book2plate/ui/`** : Couche de présentation pour l'interaction utilisateur quotidienne.
-* **`src/book2plate/ui/__init__.py`** : Initialise le module d'interface utilisateur.
-* **`src/book2plate/ui/app.py`** : Application web Streamlit légère permettant d'importer des recettes et de visualiser les fiches condensées.
+* **`data/`**: Parent directory grouping all raw data, static reference datasets, and evaluation sets.
+* **`data/raw/`**: Local storage space for raw cooking PDF files and temporary audio extractions.
+* **`data/references/`**: Folder containing the four open databases used by the deterministic engines.
+  * **`data/references/flavorgraph_embeddings.pkl`**: 300D vector embeddings for computing molecular and aromatic substitutions.
+  * **`data/references/open_prices.parquet`**: Real prices collected in French supermarkets from Open Food Facts.
+  * **`data/references/ciqual_2020.csv`**: Official ANSES nutritional table containing calorie and macronutrient content.
+  * **`data/references/wine_pairing_rules.json`**: Structured matrix of sommelier rules and non-alcoholic pairing alternatives.
+* **`data/eval_datasets/`**: Annotated reference recipe sets used as ground truth for non-hallucination tests in CI/CD.
 
 ---
 
-### Répertoire `tests/` (Suites de tests découplées)
+### `src/book2plate/` Directory (Application Source Code)
 
-* **`tests/`** : Répertoire parent regroupant l'ensemble des tests automatisés exécutés par pytest.
-* **`tests/conftest.py`** : Déclare les fixtures partagées, mocks et objets de recettes réutilisés par tous les tests.
-* **`tests/unit/`** : Tests vérifiant chaque composant de manière isolée sans réseau ni base active.
-* **`tests/unit/test_schemas.py`** : Valide le respect des contraintes de typage et de validation des schémas Pydantic.
-* **`tests/unit/test_pricing.py`** : Vérifie le calcul exact du coût des ingrédients à partir du fichier Open Prices.
-* **`tests/unit/test_chemistry.py`** : Vérifie que le calcul de similarité cosinus FlavorGraph renvoie des substituts cohérents.
-* **`tests/unit/test_guardrails.py`** : Vérifie qu'une recette contenant un allergène déclaré est systématiquement rejetée.
-* **`tests/unit/test_ingestion_pdf.py`** : Teste le découpage de texte sur un exemple de page PDF sans appel externe.
-* **`tests/unit/test_ingestion_insta.py`** : Teste l'extraction des légendes et le déclenchement conditionnel de la transcription.
+* **`src/`**: Python source root isolating business logic from ancillary configurations.
+* **`src/book2plate/`**: Main package containing all application sub-modules.
+* **`src/book2plate/__init__.py`**: Declares the directory as an importable Python package.
+* **`src/book2plate/config.py`**: Loads and type-validates configuration variables and paths via Pydantic Settings.
 
+#### `core/` Module (Universal Data Contracts)
 
-* **`tests/integration/`** : Tests vérifiant la bonne communication entre plusieurs composants du système.
-* **`tests/integration/test_clustering.py`** : Valide l'insertion de recettes dans pgvector et la création effective d'un cluster.
-* **`tests/integration/test_langgraph_flow.py`** : Valide l'exécution du graphe LangGraph de bout en bout et la pause humaine.
+* **`src/book2plate/core/`**: Application core defining shared data contracts with no external dependencies.
+* **`src/book2plate/core/__init__.py`**: Exposes the fundamental data models from the core module.
+* **`src/book2plate/core/enums.py`**: Strict enumerations for units of measure, dish types, and dietary constraints.
+* **`src/book2plate/core/schemas.py`**: Pydantic v2 schemas defining the strict structures for ingredients, steps, and recipes.
 
+#### `deterministic/` Module (Real Computation Engines — Zero LLM)
 
-* **`tests/evals/`** : Bancs de tests mesurant scientifiquement la qualité des modèles.
-* **`tests/evals/test_faithfulness.py`** : Évalue via Ragas ou DeepEval que la recette fusionnée n'invente aucun ingrédient ni étape.
+* **`src/book2plate/deterministic/`**: Mathematical and deterministic algorithms operating on reference data without any LLM.
+* **`src/book2plate/deterministic/__init__.py`**: Exposes the deterministic computation functions.
+* **`src/book2plate/deterministic/chemistry.py`**: Computes aromatic similarities and suggests ingredient substitutes via FlavorGraph.
+* **`src/book2plate/deterministic/pricing.py`**: Calculates the real cost per kilogram and the total basket budget using Open Prices data.
+* **`src/book2plate/deterministic/nutrition.py`**: Maps ingredients to the Ciqual table to compute exact calories and macronutrients.
+* **`src/book2plate/deterministic/beverage_pairing.py`**: Determines wine and non-alcoholic beverage pairings based on the dish's dominant flavor profile.
+
+#### `ingestion/` Module (Multimodal Extraction)
+
+* **`src/book2plate/ingestion/`**: Extraction pipeline transforming PDFs and Instagram videos into structured text.
+* **`src/book2plate/ingestion/__init__.py`**: Initializes the ingestion pipeline.
+* **`src/book2plate/ingestion/pdf_parser.py`**: Splits PDF book pages and separates the ingredient list from the instructions.
+* **`src/book2plate/ingestion/insta_extractor.py`**: Retrieves the text caption and downloads the audio track from Instagram Reels via yt-dlp.
+* **`src/book2plate/ingestion/audio_transcriber.py`**: Locally transcribes the voice from culinary videos to text using Faster-Whisper.
+* **`src/book2plate/ingestion/structurer.py`**: Converts raw text from books or Whisper into a validated `RecipeSchema` object.
+* **`src/book2plate/ingestion/cli.py`**: Terminal-executable script for manually testing the ingestion of a file or link.
+
+#### `storage/` Module (Persistence and Vector Indexing)
+
+* **`src/book2plate/storage/`**: Data access layer, relational persistence, and similarity search.
+* **`src/book2plate/storage/__init__.py`**: Initializes the storage layer.
+* **`src/book2plate/storage/database.py`**: Manages the asynchronous connection and sessions to the PostgreSQL database.
+* **`src/book2plate/storage/models.py`**: Defines the SQLAlchemy tables for recipes, ingredients, clusters, and user feedback.
+* **`src/book2plate/storage/vector_store.py`**: Indexes recipe descriptions and enables similarity search with pgvector.
+* **`src/book2plate/storage/clustering.py`**: Automatically groups variants of the same dish into vector clusters.
+
+#### `engine/` Module (Multi-Agent Orchestration and Merging)
+
+* **`src/book2plate/engine/`**: Decision engine combining variant merging and human-supervised validation.
+* **`src/book2plate/engine/__init__.py`**: Initializes the orchestration engine.
+* **`src/book2plate/engine/state.py`**: Defines the structure of the shared state flowing through the LangGraph graph.
+* **`src/book2plate/engine/graph.py`**: Builds the directed state graph linking filtering, merging, and human approval.
+* **`src/book2plate/engine/fusion_nodes.py`**: Merges cluster variants by integrating aromatic substitutes and fridge leftovers.
+* **`src/book2plate/engine/guardrails.py`**: Deterministic safety filter blocking the inclusion of allergens or banned ingredients.
+* **`src/book2plate/engine/formatters.py`**: Transforms the validated recipe into two output formats (detailed step-by-step mode and condensed cheat-sheet mode).
+
+#### `api/` Module (Asynchronous Web Exposure)
+
+* **`src/book2plate/api/`**: Layer exposing business features as an HTTP REST API.
+* **`src/book2plate/api/__init__.py`**: Initializes the API module.
+* **`src/book2plate/api/main.py`**: FastAPI application entry point declaring middlewares and mount points.
+* **`src/book2plate/api/routes/`**: Folder containing FastAPI routers split by functional domain.
+* **`src/book2plate/api/routes/ingest.py`**: Endpoints receiving ingestion requests for PDFs and Instagram URLs.
+* **`src/book2plate/api/routes/recipes.py`**: Endpoints for listing, viewing, and filtering saved recipes and clusters.
+* **`src/book2plate/api/routes/planner.py`**: Endpoint launching menu generation with asynchronous result streaming.
+
+#### `ui/` Module (Minimal User Interface)
+
+* **`src/book2plate/ui/`**: Presentation layer for day-to-day user interaction.
+* **`src/book2plate/ui/__init__.py`**: Initializes the user interface module.
+* **`src/book2plate/ui/app.py`**: Lightweight Streamlit web application for importing recipes and viewing condensed cards.
+
+---
+
+### `tests/` Directory (Decoupled Test Suites)
+
+* **`tests/`**: Parent directory grouping all automated tests run by pytest.
+* **`tests/conftest.py`**: Declares shared fixtures, mocks, and recipe objects reused across all tests.
+* **`tests/unit/`**: Tests verifying each component in isolation, with no network or active database.
+  * **`tests/unit/test_schemas.py`**: Validates that Pydantic schema typing and validation constraints are respected.
+  * **`tests/unit/test_pricing.py`**: Verifies the exact ingredient cost calculation from the Open Prices file.
+  * **`tests/unit/test_chemistry.py`**: Verifies that the FlavorGraph cosine similarity computation returns consistent substitutes.
+  * **`tests/unit/test_guardrails.py`**: Verifies that a recipe containing a declared allergen is systematically rejected.
+  * **`tests/unit/test_ingestion_pdf.py`**: Tests text splitting on a sample PDF page without external calls.
+  * **`tests/unit/test_ingestion_insta.py`**: Tests caption extraction and conditional triggering of transcription.
+* **`tests/integration/`**: Tests verifying correct communication between multiple system components.
+  * **`tests/integration/test_clustering.py`**: Validates recipe insertion into pgvector and effective cluster creation.
+  * **`tests/integration/test_langgraph_flow.py`**: Validates end-to-end LangGraph graph execution and the human pause.
+* **`tests/evals/`**: Test benches scientifically measuring model quality.
+  * **`tests/evals/test_faithfulness.py`**: Evaluates via Ragas or DeepEval that the merged recipe invents no ingredient or step.

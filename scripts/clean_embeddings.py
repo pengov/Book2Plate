@@ -1,4 +1,4 @@
-"""Script d'assainissement des embeddings et noeuds de FlavorGraph."""
+"""Script to sanitize FlavorGraph embeddings and node data."""
 
 import csv
 import pickle
@@ -15,7 +15,7 @@ RAW_CSV = settings.flavorgraph_nodes_path
 CLEAN_PKL = DATA_DIR / "flavorgraph_cleaned.pkl"
 CLEAN_CSV = DATA_DIR / "nodes_cleaned.csv"
 
-# Termes non alimentaires fréquents dans Recipe1M
+# Common non-food terms found in Recipe1M
 EXCLUDED_PATTERNS = [
     r"\bpen\b",
     r"\bpin\b",
@@ -60,7 +60,7 @@ def is_valid_food_item(name: str) -> bool:
 
 
 def clean_dataset():
-    # Chargement du CSV
+    # Load the CSV
     nodes_info = {}
     with open(RAW_CSV, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -68,13 +68,13 @@ def clean_dataset():
             node_id = int(row["node_id"])
             name = row["name"].strip().lower().replace("_", " ")
             nodes_info[node_id] = {"name": name, "node_type": row["node_type"]}
-    print(f"Total noeuds initiaux dans le CSV : {len(nodes_info):,}")
+    print(f"Total initial nodes in CSV: {len(nodes_info):,}")
 
-    # Chargement du Pickle des vecteurs
+    # Load the embeddings pickle
     with open(RAW_PKL, "rb") as f:
         raw_embeddings = pickle.load(f)
 
-    # Filtrage combiné
+    # Combined filtering
     cleaned_embeddings = {}
     cleaned_nodes = []
     removed_non_food = []
@@ -87,11 +87,11 @@ def clean_dataset():
         meta = nodes_info[node_id]
         name = meta["name"].strip().lower().replace("_", " ")
 
-        # Élimination des molécules chimiques
+        # Remove chemical compounds
         if meta["node_type"] != "ingredient":
             continue
 
-        # Élimination du matériel et des anomalies
+        # Remove equipment and anomalies
         if not is_valid_food_item(name):
             removed_non_food.append(name)
             continue
@@ -106,12 +106,12 @@ def clean_dataset():
                 "name": name,
             })
 
-    print(f"Noeuds exclus (molécules chimiques) : ~1650")
-    print(f"Noeuds exclus (bruit / ustensiles / anomalies) : {len(removed_non_food)}")
-    print(f"Exemples d'éléments exclus : {removed_non_food[:15]}")
-    print(f"Ingrédients alimentaires conservés : {len(cleaned_embeddings)}")
+    print(f"Nodes removed (chemical compounds): ~1650")
+    print(f"Nodes removed (noise / equipment / anomalies): {len(removed_non_food)}")
+    print(f"Sample removed items: {removed_non_food[:15]}")
+    print(f"Food ingredients kept: {len(cleaned_embeddings)}")
 
-    # Sauvegarde des artefacts épurés
+    # Save cleaned artifacts
     with open(CLEAN_PKL, "wb") as f:
         pickle.dump(cleaned_embeddings, f)
 
@@ -120,8 +120,8 @@ def clean_dataset():
         writer.writeheader()
         writer.writerows(cleaned_nodes)
 
-    print(f"Artefact nettoyé sauvegardé : {CLEAN_PKL}")
-    print(f"Index nettoyé sauvegardé : {CLEAN_CSV}")
+    print(f"Cleaned embeddings saved: {CLEAN_PKL}")
+    print(f"Cleaned index saved: {CLEAN_CSV}")
 
 
 if __name__ == "__main__":

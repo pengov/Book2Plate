@@ -1,94 +1,94 @@
-# `agent.md` — Directives d'ingénierie pour Book2Plate
+# `agent.md` — Engineering Directives for Book2Plate
 
-## 1. Contexte et mission du projet
+## 1. Project Context and Mission
 
-**Book2Plate** est un moteur d'ingénierie logicielle permettant de découper, regrouper (*clustering*), enrichir et fusionner des recettes issues de livres de cuisine (PDF) et de réseaux sociaux (Instagram/Reels) pour générer des plannings de repas réalistes et des fiches condensées pour cuisiniers aguerris.
+**Book2Plate** is a software engineering engine that extracts, clusters, enriches, and merges recipes from cookbooks (PDF) and social media (Instagram/Reels) to generate realistic meal plans and condensed recipe cards for experienced cooks.
 
-Le projet applique une séparation stricte entre :
+The project enforces a strict separation between:
 
-* **Les moteurs déterministes :** calculs de prix réels, substitutions chimiques basées sur la science aromatique, tables nutritionnelles officielles et règles de sommellerie.
-* **Les modèles probabilistes / LLMs :** normalisation textuelle multimodale et assistance à la fusion créative, toujours encadrés par des schémas stricts et des garde-fous.
-
----
-
-## 2. Règles fondamentales et principes non-négociables
-
-### A. Typage strict et validation Pydantic v2
-
-* Tout échange de données entre modules doit s'appuyer exclusivement sur les contrats définis dans `book2plate.core.schemas`.
-* Aucun dictionnaire Python brut (`dict[str, Any]`) non typé ne doit circuler entre les couches logicielles.
-* Les validations doivent être défensives : quantités strictement positives, unités issues de `UnitEnum`, durées supérieures ou égales à zéro.
-
-### B. Moteurs déterministes sans dépendance LLM
-
-* Le module `book2plate.deterministic` ne doit effectuer **aucun appel d'API LLM**, direct ou indirect.
-* Les prix doivent provenir uniquement de calculs sur `open_prices.parquet` via DuckDB ou Polars.
-* Les substitutions d'ingrédients doivent découler du calcul de similarité cosinus sur les vecteurs de `flavorgraph_embeddings.pkl`.
-* Les macronutriments doivent provenir du référentiel `ciqual_2020.csv`.
-
-### C. Découplage strict des modules (Architecture modulaire)
-
-* Chaque sous-dossier de `src/book2plate/` doit pouvoir s'exécuter et être testé de manière totalement isolée.
-* Aucun test unitaire dans `tests/unit/` ne doit nécessiter :
-* Une connexion réseau internet active.
-* Une base de données PostgreSQL en fonctionnement (utiliser des mocks ou des structures en mémoire).
-* Un appel API externe payant.
-
-### D. Gestion de l'asynchronisme
-
-* Les endpoints d'API (`FastAPI`) et les flux de streaming d'agents doivent privilégier la programmation asynchrone (`async` / `await`).
-* L'I/O bloquante (lecture disque lourde de modèles ou parsing audio volumineux) doit être déléguée à des exécuteurs de threads (`asyncio.to_thread`) pour ne jamais bloquer la boucle d'événements.
+* **Deterministic engines:** real price calculations, chemistry-based substitutions grounded in flavor science, official nutritional tables, and sommelier pairing rules.
+* **Probabilistic models / LLMs:** multimodal text normalization and creative merge assistance, always constrained by strict schemas and guardrails.
 
 ---
 
-## 3. Dépendances de données de référence
+## 2. Fundamental Rules and Non-Negotiable Principles
 
-Les 4 fichiers suivants sont stockés en local dans `data/references/` et ne doivent jamais être commités sur Git :
+### A. Strict Typing and Pydantic v2 Validation
 
-1. `flavorgraph_embeddings.pkl` : Dictionnaire d'embeddings 300D pour les calculs aromatiques.
-2. `open_prices.parquet` : Base de prix réels relevés en supermarché.
-3. `ciqual_2020.csv` : Table nutritionnelle officielle de l'ANSES.
-4. `wine_pairing_rules.json` : Règles déterministes d'accords mets-boissons.
+* All data exchanged between modules must rely exclusively on contracts defined in `book2plate.core.schemas`.
+* No untyped raw Python dictionaries (`dict[str, Any]`) may flow between software layers.
+* Validations must be defensive: strictly positive quantities, units from `UnitEnum`, durations greater than or equal to zero.
 
-L'accès à ces chemins doit toujours s'effectuer via l'objet centralisé `book2plate.config.settings`.
+### B. Deterministic Engines with No LLM Dependency
+
+* The `book2plate.deterministic` module must make **no LLM API calls**, direct or indirect.
+* Prices must come solely from calculations on `open_prices.parquet` via DuckDB or Polars.
+* Ingredient substitutions must result from cosine similarity calculations on the `flavorgraph_embeddings.pkl` vectors.
+* Macronutrients must come from the `ciqual_2020.csv` reference dataset.
+
+### C. Strict Module Decoupling (Modular Architecture)
+
+* Each subdirectory of `src/book2plate/` must be executable and testable in complete isolation.
+* No unit test in `tests/unit/` may require:
+  * An active internet connection.
+  * A running PostgreSQL database (use mocks or in-memory structures).
+  * A paid external API call.
+
+### D. Async Management
+
+* API endpoints (`FastAPI`) and agent streaming pipelines should favor async programming (`async` / `await`).
+* Blocking I/O (heavy model reads or large audio parsing) must be delegated to thread executors (`asyncio.to_thread`) to never block the event loop.
 
 ---
 
-## 4. Normes de code et conventions de développement
+## 3. Reference Data Dependencies
 
-### Style et qualité
+The following 4 files are stored locally in `data/references/` and must never be committed to Git:
 
-* Respect de PEP 8 avec une longueur maximale de ligne fixée à 120 caractères.
-* Formatage et linting gérés exclusivement par **Ruff** (`ruff check` et `ruff format`).
-* Fonctions systématiquement annotées avec des *type hints* Python stricts.
-* Documentation courte sous forme de docstring pour chaque fonction publique expliquant les entrées, sorties et effets de bord éventuels.
+1. `flavorgraph_embeddings.pkl`: Dictionary of 300D embeddings for aromatic calculations.
+2. `open_prices.parquet`: Real prices collected in supermarkets.
+3. `ciqual_2020.csv`: Official nutritional table from ANSES.
+4. `wine_pairing_rules.json`: Deterministic food-and-beverage pairing rules.
 
-### Structure des tests
-
-* `tests/unit/` : Tests unitaires instantanés validant la logique interne d'une seule fonction/classe.
-* `tests/integration/` : Tests validant la persistance en base (PostgreSQL / `pgvector`) et les pipelines LangGraph.
-* `tests/evals/` : Bancs de tests mesurant les métriques de non-hallucination (*faithfulness*, *context precision*) via Ragas ou DeepEval.
+Access to these paths must always go through the centralized `book2plate.config.settings` object.
 
 ---
 
-## 5. Commandes de référence
+## 4. Code Standards and Development Conventions
 
-| Objectif | Commande terminal |
+### Style and Quality
+
+* Comply with PEP 8 with a maximum line length of 120 characters.
+* Formatting and linting managed exclusively by **Ruff** (`ruff check` and `ruff format`).
+* All functions must be annotated with strict Python type hints.
+* Short docstring documentation for every public function explaining inputs, outputs, and any side effects.
+
+### Test Structure
+
+* `tests/unit/`: Instant unit tests validating the internal logic of a single function/class.
+* `tests/integration/`: Tests validating database persistence (PostgreSQL / `pgvector`) and LangGraph pipelines.
+* `tests/evals/`: Test benches measuring non-hallucination metrics (*faithfulness*, *context precision*) via Ragas or DeepEval.
+
+---
+
+## 5. Reference Commands
+
+| Goal | Terminal Command |
 | --- | --- |
-| Exécuter les tests unitaires | `pytest tests/unit/ -v` |
-| Exécuter un test spécifique | `pytest tests/unit/test_schemas.py -v` |
-| Vérifier le formatage et le linting | `ruff check src tests` |
-| Appliquer les corrections automatiques de code | `ruff format src tests` |
-| Lancer l'infrastructure locale (DB) | `docker compose up postgres -d` |
-| Arrêter l'infrastructure locale | `docker compose down` |
+| Run unit tests | `pytest tests/unit/ -v` |
+| Run a specific test | `pytest tests/unit/test_schemas.py -v` |
+| Check formatting and linting | `ruff check src tests` |
+| Apply automatic code fixes | `ruff format src tests` |
+| Start local infrastructure (DB) | `docker compose up postgres -d` |
+| Stop local infrastructure | `docker compose down` |
 
 ---
 
-## 6. Protocole d'intervention pour l'agent
+## 6. Agent Intervention Protocol
 
-Lorsqu'une tâche de code est confiée à l'agent :
+When a coding task is assigned to the agent:
 
-1. **Vérifier les contrats :** Consulter d'abord `src/book2plate/core/schemas.py` pour s'assurer que les modèles de données existants sont respectés.
-2. **Implémenter la logique :** Rédiger le code dans le module cible en limitant l'importation de dépendances inutiles.
-3. **Créer ou mettre à jour le test associé :** Toute nouvelle fonction doit être accompagnée de son cas de test unitaire dans `tests/unit/`.
-4. **Vérifier l'absence de régression :** Lancer `pytest` et `ruff check` avant de considérer la tâche comme terminée.
+1. **Check contracts:** First consult `src/book2plate/core/schemas.py` to ensure existing data models are respected.
+2. **Implement the logic:** Write the code in the target module, limiting unnecessary dependency imports.
+3. **Create or update the associated test:** Every new function must be accompanied by its unit test case in `tests/unit/`.
+4. **Verify no regression:** Run `pytest` and `ruff check` before considering the task complete.

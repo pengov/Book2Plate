@@ -1,4 +1,4 @@
-"""Exporte l'arborescence du code en TOON compact pour son analyse par une IA."""
+"""Exports the code tree in compact TOON format for AI analysis."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ IGNORED_DIRECTORIES = {
 
 
 def _format_type(annotation: ast.expr) -> str:
-    """Réduit une annotation Python à une notation de type courte."""
+    """Reduces a Python annotation to a short type notation."""
     if isinstance(annotation, ast.Name):
         return annotation.id
     if isinstance(annotation, ast.Attribute):
@@ -56,7 +56,7 @@ def _format_type(annotation: ast.expr) -> str:
 
 
 def _format_parameter(argument: ast.arg, default: ast.expr | None = None) -> str:
-    """Formate un paramètre sans espaces inutiles, en abrégeant type et défaut."""
+    """Formats a parameter without unnecessary whitespace, abbreviating type and default."""
     parameter = argument.arg
     optional_default = isinstance(default, ast.Constant) and default.value is None
     type_name = _format_type(argument.annotation) if argument.annotation is not None else ""
@@ -74,7 +74,7 @@ def _format_parameter(argument: ast.arg, default: ast.expr | None = None) -> str
 
 
 def _format_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-    """Produit une signature compacte, sans le nom de fonction ni self/cls."""
+    """Produces a compact signature, without the function name or self/cls."""
     arguments = node.args
     positional = arguments.posonlyargs + arguments.args
     defaults: list[ast.expr | None] = [None] * (len(positional) - len(arguments.defaults))
@@ -102,12 +102,12 @@ def _format_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     signature = f"{prefix}({','.join(parameters)})"
     if node.returns is not None:
         return_type = _format_type(node.returns)
-        signature += f"->{('void' if return_type == 'None' else return_type)}"
+        signature += f"->{'void' if return_type == 'None' else return_type}"
     return signature
 
 
 def _describe_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, Any]:
-    """Décrit une fonction, sa signature, sa docstring et ses déclarations imbriquées."""
+    """Describes a function, its signature, docstring, and nested declarations."""
     nested = _describe_declarations(node.body)
     return {
         "name": node.name,
@@ -119,7 +119,7 @@ def _describe_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str
 
 
 def _describe_class(node: ast.ClassDef) -> dict[str, Any]:
-    """Décrit une classe et les méthodes ou classes qu'elle contient."""
+    """Describes a class and the methods or classes it contains."""
     nested = _describe_declarations(node.body)
     return {
         "name": node.name,
@@ -130,7 +130,7 @@ def _describe_class(node: ast.ClassDef) -> dict[str, Any]:
 
 
 def _describe_declarations(nodes: list[ast.stmt]) -> dict[str, list[dict[str, Any]]]:
-    """Rassemble les fonctions et classes déclarées dans un même bloc Python."""
+    """Collects the functions and classes declared within a single Python block."""
     classes = []
     functions = []
     for node in nodes:
@@ -142,7 +142,7 @@ def _describe_declarations(nodes: list[ast.stmt]) -> dict[str, list[dict[str, An
 
 
 def _describe_file(path: Path, root: Path) -> dict[str, Any]:
-    """Décrit un fichier et analyse ses déclarations s'il s'agit de Python."""
+    """Describes a file and parses its declarations if it is a Python file."""
     description: dict[str, Any] = {
         "type": "file",
         "name": path.name,
@@ -159,7 +159,7 @@ def _describe_file(path: Path, root: Path) -> dict[str, Any]:
 
 
 def _describe_directory(path: Path, root: Path) -> dict[str, Any]:
-    """Construit récursivement l'arborescence en ignorant les données et caches."""
+    """Recursively builds the directory tree, skipping data and cache directories."""
     children = []
     for child in sorted(path.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower())):
         if child.is_dir():
@@ -185,7 +185,7 @@ def _collect_declarations(
     structure: dict[str, Any],
     parent_class_id: int | None = None,
 ) -> None:
-    """Aplatit les déclarations en tables TOON avec des colonnes uniformes."""
+    """Flattens declarations into TOON tables with uniform columns."""
     for class_info in classes:
         class_id = len(structure["classes"])
         class_entry: dict[str, Any] = {
@@ -236,7 +236,7 @@ def _flatten_directory(
     structure: dict[str, Any],
     file_tree: dict[str, Any],
 ) -> None:
-    """Construit l'arbre des dossiers et associe un identifiant à chaque fichier."""
+    """Builds the directory tree and assigns an identifier to each file."""
     for item in directory["children"]:
         if item["type"] == "directory":
             child_tree: dict[str, Any] = {}
@@ -256,7 +256,7 @@ def _flatten_directory(
 
 
 def build_code_structure(source_root: Path) -> dict[str, Any]:
-    """Retourne une structure TOON compacte avec les fichiers et symboles documentés."""
+    """Returns a compact TOON structure containing all documented files and symbols."""
     tree = _describe_directory(source_root, source_root)
     structure: dict[str, Any] = {
         "root": source_root.name,
@@ -274,22 +274,22 @@ def build_code_structure(source_root: Path) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Génère la structure TOON dans scripts/results/ depuis src/book2plate."""
+    """Generates the TOON structure in scripts/results/ from src/book2plate."""
     project_root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=project_root, help="Racine du projet contenant src/book2plate.")
+    parser.add_argument("--root", type=Path, default=project_root, help="Project root containing src/book2plate.")
     arguments = parser.parse_args(argv)
 
     project_root = arguments.root.resolve()
     source_root = project_root / "src" / "book2plate"
     if not source_root.is_dir():
-        parser.error(f"Le dossier source est introuvable : {source_root}")
+        parser.error(f"Source directory not found: {source_root}")
     output_path = project_root / "scripts" / "results" / "code_structure.toon"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     structure = build_code_structure(source_root)
     output_path.write_text(encode(structure) + "\n", encoding="utf-8")
-    print(f"Structure exportée : {output_path}")
+    print(f"Structure exported: {output_path}")
     return 0
 
 

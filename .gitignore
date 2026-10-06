@@ -21,3 +21,4 @@ data/references/*
 !data/references/.gitkeep
 
 .env
+ROADMAP.md
