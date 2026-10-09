@@ -75,20 +75,41 @@ Access to these paths must always go through the centralized `book2plate.config.
 
 | Goal | Terminal Command |
 | --- | --- |
-| Run unit tests | `pytest tests/unit/ -v` |
-| Run a specific test | `pytest tests/unit/test_schemas.py -v` |
-| Check formatting and linting | `ruff check src tests` |
-| Apply automatic code fixes | `ruff format src tests` |
+| **Run All QA Checks (Syntax + Pytest)** | `python scripts/qa.py` |
+| Run unit tests directly | `python -m pytest src/tests/unit/ -v` |
+| Run a specific test | `python -m pytest src/tests/unit/test_schemas.py -v` |
 | Start local infrastructure (DB) | `docker compose up postgres -d` |
 | Stop local infrastructure | `docker compose down` |
 
 ---
 
-## 6. Agent Intervention Protocol
+## 6. Agent Intervention Protocol & Customizations
 
 When a coding task is assigned to the agent:
 
-1. **Check contracts:** First consult `src/book2plate/core/schemas.py` to ensure existing data models are respected.
-2. **Implement the logic:** Write the code in the target module, limiting unnecessary dependency imports.
-3. **Create or update the associated test:** Every new function must be accompanied by its unit test case in `tests/unit/`.
-4. **Verify no regression:** Run `pytest` and `ruff check` before considering the task complete.
+1. **Safety Hooks (`.agents/hooks.json`):** Destructive git operations (`reset`, `stash`, `push --force`) are mechanically blocked by the `guard_git.py` PreToolUse hook.
+2. **Check contracts:** First consult `src/book2plate/core/schemas.py` to ensure existing data models are respected.
+3. **Implement the logic:** Write the code in the target module, limiting unnecessary dependency imports.
+4. **Create or update the associated test:** Every new function must be accompanied by its unit test case in `src/tests/unit/`.
+5. **Verify no regression:** Run `python scripts/qa.py` before considering the task complete.
+
+---
+
+## 7. Agent Utility Scripts
+
+The agent is **allowed and encouraged** to create personal utility scripts to save tokens and avoid redundant exploration across sessions.
+
+### Rules
+
+* **Location:** All agent utility scripts must be saved in `scripts/agent/`.
+* **Before exploring data**, check whether a relevant script already exists in `scripts/agent/`. If it does, run it directly instead of re-exploring from scratch.
+* **After any non-trivial exploration** (inspecting a reference file, profiling data, mapping columns, etc.), save the result as a reusable script or a plain output file in `scripts/agent/`.
+* Scripts are **not production code** — no need for type hints or docstrings. Keep them simple and focused.
+* WHen a new is script is created, modify scripts/agent/README.md to add a line to explain quickly what the script do.
+
+---
+
+## 8. Operational Boundary
+
+* **Read-Only by default:** Never mutate workspace state (create/edit/delete files or run modifying commands) without an explicit user instruction.
+* **Propose before acting:** During analysis, answers, or diagnostics, provide text only. Propose modifications and await explicit user confirmation before executing.

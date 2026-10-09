@@ -12,8 +12,10 @@ class Settings(BaseSettings):
 
     flavorgraph_path: Path = references_dir / "flavorgraph_embeddings.pkl"
     flavorgraph_nodes_path: Path = references_dir / "nodes_191120.csv"
-    flavorgraph_cleaned_path: Path = references_dir / "flavorgraph_cleaned.pkl"
+    flavorgraph_cleaned_path: Path = references_dir / "flavorgraph_cleaned_300d.pkl"
     flavorgraph_nodes_cleaned_path: Path = references_dir / "nodes_cleaned.csv"
+    alias_map_path: Path = references_dir / "alias_map.json"
+    canonical_clusters_path: Path = references_dir / "canonical_clusters.json"
     open_prices_path: Path = references_dir / "open_prices.parquet"
     ciqual_path: Path = references_dir / "ciqual_2020.csv"
     wine_pairing_path: Path = references_dir / "wine_pairing_rules.json"

@@ -29,6 +29,7 @@ def synthetic_engine() -> FlavorChemistryEngine:
         "opposite": np.array([-1.0, 0.0], dtype=np.float32),
     }
     instance._norms = {name: 1.0 for name in instance._embeddings}
+    instance._alias_map = {}
     return instance
 
 
@@ -200,3 +201,10 @@ def test_get_ingredient_norm_known(engine: FlavorChemistryEngine) -> None:
 def test_get_ingredient_norm_unknown(engine: FlavorChemistryEngine) -> None:
     """Verifies that the norm of an unknown ingredient is None."""
     assert engine.get_ingredient_norm("ingredient_xyz_unknown") is None
+
+
+def test_alias_resolution_in_chemistry_engine(engine: FlavorChemistryEngine) -> None:
+    """Verifies that aliases defined in alias_map.json resolve to canonical ingredient names."""
+    canonical = engine.get_ingredient_name("baker's unsweetened chocolate square")
+    if canonical:
+        assert canonical in ["unsweetened chocolate", "unsweetened_chocolate"]

@@ -1,6 +1,7 @@
 """Deterministic ingredient substitution engine based on FlavorGraph."""
 
 import csv
+import json
 import pickle
 from pathlib import Path
 
@@ -16,13 +17,15 @@ class FlavorChemistryEngine:
         self,
         embeddings_path: Path | None = None,
         nodes_path: Path | None = None,
+        alias_map_path: Path | None = None,
     ) -> None:
-        """Initializes the engine and loads embeddings from the provided paths or configuration."""
         self.embeddings_path = embeddings_path or settings.flavorgraph_cleaned_path
         self.nodes_path = nodes_path or settings.flavorgraph_nodes_cleaned_path
+        self.alias_map_path = alias_map_path or settings.alias_map_path
 
         self._embeddings: dict[str, np.ndarray] = {}  # name -> normalized vector
         self._norms: dict[str, float] = {}  # name -> original L2 norm
+        self._alias_map: dict[str, str] = {}  # alias -> canonical name
 
         self._load_embeddings()
 
@@ -65,6 +68,13 @@ class FlavorChemistryEngine:
                 self._embeddings[name] = arr / norm
                 self._norms[name] = original_norms.get(name, norm)
 
+        if self.alias_map_path and self.alias_map_path.exists():
+            try:
+                with open(self.alias_map_path, "r", encoding="utf-8") as f:
+                    self._alias_map = json.load(f)
+            except Exception:
+                self._alias_map = {}
+
     def _metric(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Returns the dot product of two already-normalized embeddings, equivalent to cosine similarity."""
         return float(np.dot(vec1, vec2))
@@ -79,11 +89,22 @@ class FlavorChemistryEngine:
         return list(self._embeddings.keys())
 
     def get_ingredient_name(self, ingredient_name: str) -> str | None:
-        """Normalizes a name and returns it if known, otherwise returns None."""
+        """Normalizes a name, resolves aliases if present, and returns the canonical name if known."""
         assert ingredient_name, "Ingredient name cannot be empty."
-        normalized_name = ingredient_name.lower().strip().replace("_", " ")
-        if normalized_name in self._norms:
+        raw_lower = ingredient_name.lower().strip()
+
+        alias_map = getattr(self, "_alias_map", {})
+        # Check alias map (raw string, spaces, or underscores)
+        target = alias_map.get(raw_lower) or alias_map.get(raw_lower.replace("_", " "))
+        if target:
+            raw_lower = target.lower().strip()
+
+        normalized_name = raw_lower.replace("_", " ")
+        if normalized_name in self._norms or normalized_name in self._embeddings:
             return normalized_name
+        if raw_lower in self._norms or raw_lower in self._embeddings:
+            return raw_lower
+        return None
 
     def get_ingredient_names(self, ingredient_names: list[str]) -> list[str]:
         """Normalizes a list of names and keeps only the known ingredients."""

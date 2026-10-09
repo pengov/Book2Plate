@@ -22,3 +22,6 @@ data/references/*
 
 .env
 ROADMAP.md
+
+.agents
+scripts/agent/
